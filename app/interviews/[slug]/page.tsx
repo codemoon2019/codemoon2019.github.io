@@ -1,8 +1,8 @@
-import { notFound, permanentRedirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/shared/json-ld";
 import { ArticleShell } from "@/components/journal/article-shell";
 import { getPostBySlug, getPostSlugs } from "@/lib/mdx";
-import { articleHref, isInterviewSlug } from "@/content/journal";
+import { isInterviewSlug } from "@/content/journal";
 import {
   articleSchema,
   breadcrumbSchema,
@@ -17,22 +17,19 @@ type Props = { params: Promise<{ slug: string }> };
 
 export function generateStaticParams() {
   return getPostSlugs()
-    .filter((slug) => !isInterviewSlug(slug))
+    .filter((slug) => isInterviewSlug(slug))
     .map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
-  if (isInterviewSlug(slug)) {
-    return {};
-  }
   try {
     const post = getPostBySlug(slug);
-    if (post.draft) return {};
+    if (post.draft || !isInterviewSlug(slug)) return {};
     return buildMetadata({
       title: post.title,
       description: post.description,
-      path: `/blog/${post.slug}/`,
+      path: `/interviews/${post.slug}/`,
       type: "article",
       image: post.image,
       publishedTime: post.date,
@@ -44,12 +41,8 @@ export async function generateMetadata({ params }: Props) {
   }
 }
 
-export default async function BlogPostPage({ params }: Props) {
+export default async function InterviewArticlePage({ params }: Props) {
   const { slug } = await params;
-  if (isInterviewSlug(slug)) {
-    permanentRedirect(articleHref(slug));
-  }
-
   let post;
   try {
     post = getPostBySlug(slug);
@@ -57,9 +50,9 @@ export default async function BlogPostPage({ params }: Props) {
     notFound();
   }
 
-  if (post.draft) notFound();
+  if (post.draft || !isInterviewSlug(slug)) notFound();
 
-  const path = `/blog/${post.slug}/`;
+  const path = `/interviews/${post.slug}/`;
   const schema = graphSchema([
     websiteSchema(),
     personSchema(),
@@ -70,7 +63,7 @@ export default async function BlogPostPage({ params }: Props) {
     }),
     breadcrumbSchema([
       { name: "Home", path: "/" },
-      { name: "Journal", path: "/blog/" },
+      { name: "Interview Lab", path: "/interviews/" },
       { name: post.title, path },
     ]),
     articleSchema({
@@ -91,7 +84,7 @@ export default async function BlogPostPage({ params }: Props) {
         post={post}
         breadcrumbs={[
           { name: "Home", href: "/" },
-          { name: "Journal", href: "/blog/" },
+          { name: "Interview Lab", href: "/interviews/" },
           { name: post.title },
         ]}
       />
